@@ -1,0 +1,73 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model point_keyframes {
+  id             Int            @id @default(autoincrement())
+  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
+  point_id       Int
+  sequence_id    Int
+  data           Json
+  project_points project_points @relation(fields: [point_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model project_frames {
+  project_id  Int
+  sequence_id Int     @db.SmallInt
+  blob        String?
+  id          Int     @id @default(autoincrement())
+}
+
+model project_points {
+  id              Int               @id @default(autoincrement())
+  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  multi           Boolean           @default(false)
+  label           String            @default("New Point")
+  data            Json?
+  visible         Boolean           @default(true)
+  project_id      Int?
+  object_class    String?
+  object_id       String?
+  thumbnail_blob  String?
+  gallery_id      String?
+  projects        projects?         @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  point_keyframes point_keyframes[]
+}
+
+model projects {
+  id             Int              @id @default(autoincrement())
+  inserted_at    DateTime         @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at     DateTime         @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  frame_rate     Float?
+  name           String?
+  total_frames   Int?             @default(0) @db.SmallInt
+  project_uuid   String           @unique @db.Uuid
+  thumbnail_blob String?
+  dataset_id     String?
+  sample_id      String?
+  user_uuid      String?
+  frame_width    Int?
+  frame_height   Int?
+  project_points project_points[]
+  tasks          tasks[]
+}
+
+model tasks {
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  project_id Int?
+  dag_id     String
+  run_id     String
+  status     String?
+  result     Json?
+  type       String?
+  is_read    Boolean?
+  projects   projects? @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([dag_id, run_id])
+}
